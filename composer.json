@@ -1,0 +1,37 @@
+{
+  "name": "ddrv/slim-session",
+  "type": "library",
+  "description": "PHP library for sessions",
+  "keywords": ["sessions", "flash-messages"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Ivan Dudarev",
+      "email": "ivan@ddrv.ru",
+      "homepage": "https://ddrv.ru"
+    }
+  ],
+  "require": {
+    "php": ">=7.1",
+    "psr/http-message": "^1.0",
+    "psr/http-server-middleware": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.1",
+    "squizlabs/php_codesniffer": "^3.5",
+    "slim/psr7": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Ddrv\\Slim\\Session\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Ddrv\\Tests\\Slim\\Session\\": "tests/"
+    }
+  },
+  "suggest": {
+    "ext-openssl": "Need for using Ddrv\\Slim\\Session\\Handler\\EncryptedHandlerDecorator"
+  }
+}
