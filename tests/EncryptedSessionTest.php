@@ -6,12 +6,13 @@ namespace Ddrv\Tests\Slim\Session;
 
 use Ddrv\Slim\Session\Handler;
 use Ddrv\Slim\Session\Handler\ArrayHandler;
+use Ddrv\Slim\Session\Handler\EncryptedHandlerDecorator;
 
-class SessionTest extends SessionTestCase
+class EncryptedSessionTest extends SessionTestCase
 {
 
     protected function getSessionHandler(): Handler
     {
-        return new ArrayHandler();
+        return new EncryptedHandlerDecorator(new ArrayHandler(), 'secret', 3);
     }
 }

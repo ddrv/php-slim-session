@@ -6,90 +6,25 @@ namespace Ddrv\Slim\Session;
 
 final class Session
 {
-    /**
-     * @var Handler
-     */
-    private $handler;
-
-    /**
-     * @var string|null
-     */
-    private $id = null;
-
-    /**
-     * @var bool
-     */
-    private $isStarted = false;
 
     /**
      * @var array
      */
     private $data;
 
-    public function __construct(Handler $handler)
+    /**
+     * @var bool
+     */
+    private $isNeedRegenerate = false;
+
+    private function __construct()
     {
-        $this->handler = $handler;
         $this->data = [
             'data' => [],
             'prev' => [],
             'flash' => [],
             'counter' => [],
         ];
-    }
-
-    public function id(): ?string
-    {
-        return $this->id;
-    }
-
-    public function start(?string $id = null): void
-    {
-        if ($this->isStarted) {
-            return;
-        }
-        if (!$id) {
-            $id = $this->handler->generateId();
-        }
-        $this->id = $id;
-        $string = $this->handler->read($this->id);
-        $data = empty($string) ? [] : unserialize($string);
-        $this->data['data'] = array_key_exists('data', $data) ? (array)$data['data'] : [];
-        $this->data['counter'] = array_key_exists('counter', $data) ? (array)$data['counter'] : [];
-        $this->data['prev'] = array_key_exists('flash', $data) ? (array)$data['flash'] : [];
-        $this->data['flash'] = [];
-        $this->isStarted = true;
-    }
-
-    public function regenerate(): void
-    {
-        if (!$this->isStarted) {
-            return;
-        }
-        $id = $this->id;
-        $this->id = $this->handler->generateId();
-        $this->handler->destroy($id);
-        $this->handler->write($this->id, serialize($this->data));
-    }
-
-    public function write(): void
-    {
-        if (!$this->isStarted) {
-            return;
-        }
-        $this->handler->write($this->id, serialize($this->data));
-        $this->isStarted = false;
-    }
-
-    /**
-     * @void
-     */
-    public function destroy(): void
-    {
-        if (!$this->isStarted) {
-            return;
-        }
-        $this->handler->destroy($this->id);
-        $this->isStarted = false;
     }
 
     /**
@@ -211,5 +146,31 @@ final class Session
         }
         $this->data['counter'][$counter]--;
         return $this->data['counter'][$counter];
+    }
+
+    public function regenerate(): void
+    {
+        $this->isNeedRegenerate = true;
+    }
+
+    public function isNeedRegenerate(): bool
+    {
+        return $this->isNeedRegenerate;
+    }
+
+    public function __toString(): string
+    {
+        return serialize($this->data);
+    }
+
+    public static function create(?string $serialized = null): self
+    {
+        $session = new self();
+        $data = $serialized ? unserialize($serialized) : [];
+        $session->data['data'] = array_key_exists('data', $data) ? (array)$data['data'] : [];
+        $session->data['counter'] = array_key_exists('counter', $data) ? (array)$data['counter'] : [];
+        $session->data['prev'] = array_key_exists('flash', $data) ? (array)$data['flash'] : [];
+        $session->data['flash'] = [];
+        return $session;
     }
 }

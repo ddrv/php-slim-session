@@ -5,7 +5,11 @@ namespace Ddrv\Slim\Session\Middleware;
 use DateTime;
 use DateTimeZone;
 use Ddrv\Slim\Session\Handler;
-use Ddrv\Slim\Session\Session;
+use Ddrv\Slim\Session\Tool\CookieOptions;
+use Ddrv\Slim\Session\Tool\CookieOptionsDetector;
+use Ddrv\Slim\Session\Tool\SessionExtractor;
+use Ddrv\Slim\Session\Tool\SessionRegeneration;
+use Ddrv\Slim\Session\Tool\SimpleCookieOptionsDetector;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -20,132 +24,78 @@ class SessionMiddleware implements MiddlewareInterface
     private $handler;
 
     /**
-     * @var string
+     * @var CookieOptionsDetector
      */
-    private $cookieName;
+    private $detector;
 
     /**
-     * @var string
+     * @var SessionExtractor
      */
-    private $cookieDomain;
+    private $extractor;
 
     /**
-     * @var string
+     * @var SessionRegeneration|null
      */
-    private $cookiePath;
+    private $regeneration;
 
     /**
-     * @var string
+     * @var DateTimeZone
      */
-    private $cookieSameSite;
-
-    /**
-     * @var int
-     */
-    private $cookieTTL;
-
-    /**
-     * @var bool
-     */
-    private $cookieSecure;
-
-    /**
-     * @var bool
-     */
-    private $cookieHttpOnly;
-
-    /**
-     * @var string
-     */
-    private $attributeName;
-
-    /**
-     * @var int
-     */
-    private $regenerateVisits;
-
-    /**
-     * @var string
-     */
-    private $counterKey;
+    private $gmt;
 
     public function __construct(
         Handler $handler,
-        string $attributeName = 'session',
-        string $counterKey = 'visit',
-        int $regenerateVisits = 0
+        ?CookieOptionsDetector $cookieOptionsDetector = null,
+        ?SessionExtractor $sessionExtractor = null,
+        ?SessionRegeneration $sessionRegeneration = null
     ) {
         $this->handler = $handler;
-        $this->attributeName = $attributeName;
-        $this->regenerateVisits = $regenerateVisits;
-        $this->counterKey = $counterKey;
-        $this->setCookieParams('sid');
-    }
-
-    public function setCookieParams(
-        string $name,
-        ?string $domain = null,
-        string $path = '/',
-        ?string $sameSite = null,
-        int $TTL = 86400,
-        bool $secure = false,
-        bool $httpOnly = false
-    ) {
-        $this->cookieName = $name;
-        $this->cookiePath = $path;
-        $this->cookieDomain = $domain;
-        if (!is_null($sameSite)) {
-            $sameSite = ucfirst(strtolower($sameSite));
-            if (!in_array($sameSite, ['Lax', 'Strict'])) {
-                $sameSite = 'Strict';
-            }
-        }
-        $this->cookieSameSite = $sameSite;
-        $this->cookieSecure = $secure;
-        $this->cookieHttpOnly = $httpOnly;
-        $this->cookieTTL = $TTL;
+        $this->detector = $cookieOptionsDetector ?? new SimpleCookieOptionsDetector();
+        $this->extractor = $sessionExtractor ?? new SessionExtractor();
+        $this->regeneration = $sessionRegeneration;
+        $this->gmt = new DateTimeZone('GMT');
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $cookies = $request->getCookieParams();
-        $sessionId = array_key_exists($this->cookieName, $cookies) ? $cookies[$this->cookieName] : null;
-        $session = new Session($this->handler);
-        $session->start($sessionId);
-
-        if ($this->regenerateVisits > 0) {
-            $visit = $session->increment($this->counterKey);
-            if ($visit >= $this->regenerateVisits) {
-                $session->regenerate();
-                $session->reset($this->counterKey);
-            }
+        $options = $this->detector->getCookieOptions($request->getUri());
+        $sessionId = array_key_exists($options->getName(), $cookies) ? $cookies[$options->getName()] : null;
+        if (!$sessionId) {
+            $sessionId = $this->handler->generateId();
         }
-        $response = $handler->handle($request->withAttribute($this->attributeName, $session));
-        $sessionCookie = $this->getCookie($session->id());
-        $session->write();
-        return $response->withAddedHeader('Set-Cookie', $sessionCookie);
+        $session = $this->handler->read($sessionId);
+        if ($this->regeneration) {
+            $this->regeneration->visit($session);
+        }
+        $request = $request->withAttribute($this->extractor->getAttributeName(), $session);
+        $response = $handler->handle($request);
+
+        if ($session->isNeedRegenerate()) {
+            $this->handler->destroy($sessionId);
+            $sessionId = $this->handler->generateId();
+        }
+
+        $cookie = $this->createCookie($options, $sessionId);
+        $this->handler->write($sessionId, $session);
+        return $response->withAddedHeader('Set-Cookie', $cookie);
     }
 
-    private function getCookie(string $sessionId): string
+    private function createCookie(CookieOptions $options, string $sessionId): string
     {
-        $cookie = $this->cookieName . '=' . $sessionId;
-        if ($this->cookieTTL > 0) {
-            $expires = (DateTime::createFromFormat('U', (string)(time() + $this->cookieTTL)))
-                ->setTimezone(new DateTimeZone('GMT'))
-            ;
+        $cookie = $options->getName() . '=' . $sessionId;
+        $lifetime = $options->getLifetime();
+        if ($lifetime > 0) {
+            $expires = DateTime::createFromFormat('U', (string)(time() + $lifetime))->setTimezone($this->gmt);
             $cookie .= '; Expires=' . $expires->format(DateTime::RFC7231);
         }
-        $cookie .= '; Path=' . $this->cookiePath;
-        if ($this->cookieDomain) {
-            $cookie .= '; Domain=' . $this->cookieDomain;
-        }
-        if ($this->cookieSameSite) {
-            $cookie .= '; SameSite=' . $this->cookieSameSite;
-        }
-        if ($this->cookieSecure) {
+        $cookie .= '; Domain=' . $options->getDomain();
+        $cookie .= '; Path=' . $options->getLifetime();
+        $cookie .= '; SameSite=' . $options->getSameSite();
+        if ($options->isSecure()) {
             $cookie .= '; Secure';
         }
-        if ($this->cookieHttpOnly) {
+        if ($options->isHttpOnly()) {
             $cookie .= '; HttpOnly';
         }
         return $cookie;

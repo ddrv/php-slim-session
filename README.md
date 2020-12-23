@@ -18,7 +18,7 @@ PHP Library for work with sessions.
     require_once('vendor/autoload.php');
     ```
 
-## Integration
+## Integration in legacy code
 
 > For example, session cookie name used as `sess_id`.
 
@@ -27,41 +27,37 @@ PHP Library for work with sessions.
     $handler = new Ddrv\Slim\Session\Handler\FileHandler('/path/to/sessions', 'sess_id');
     ```
 
-1. Init session instance
+1. Define session ID and start the session
+
     ```php
     /** @var Ddrv\Slim\Session\Handler $handler */
-    $session = new Ddrv\Slim\Session\Session($handler);
-    ```
-   
-1. Define session ID and start the session
-    ```php
-    /** @var Ddrv\Slim\Session\Session $session */
-    $sessionId = array_key_exists('sess_id', $_COOKIE) ? $_COOKIE['sess_id'] : null; 
-    $session->start($sessionId);
+    $sessionId = array_key_exists('sess_id', $_COOKIE) ? $_COOKIE['sess_id'] : $handler->generateId(); 
+    $session = $handler->read($sessionId);
+
     // some logic
-    $session->write(); // store data to storage and close session
-    ```
-
-1. Add session cookie to response
-
-    ```php
-    /** @var Ddrv\Slim\Session\Session $session */
-    setcookie('sess_id', $session->id(), time() + 86400, '/', '.example.com', false, true);
-    ```
-
-1. When you need to update session ID do
-
-    ```php
-    /** @var Ddrv\Slim\Session\Session $session */
+    
+    // When you need to update session ID do
     $session->regenerate();
-    $newSessionId = $session->id();
+    
+    // some logic
+
+    if ($session->isNeedRegenerate()) {
+        $handler->destroy($sessionId);
+        $sessionId = $handler->generateId();
+    }
+
+    $handler->write($sessionId, $session); // store data to storage and close session
+    // add session cookie to response
+    setcookie('sess_id', $sessionId, time() + 86400, '/', '.example.com', false, true);
     ```
 
 1. When you need to destroy the session do
 
     ```php
-    /** @var Ddrv\Slim\Session\Session $session */
-    $session->destroy();
+    /** @var string $sessionId */
+    /** @var Ddrv\Slim\Session\Handler $handler */
+    $handler->destroy($sessionId);
+    setcookie('sess_id', "", time() + 86400, '/', '.example.com', false, true);
     ```
 
 
@@ -116,7 +112,7 @@ $session->decrement('counter_1'); // 3
 $session->decrement('counter_1'); // 2
 $session->counter('counter_1');   // 2
 $session->reset('counter_1');     // 0
-$session->counter('counter_1');   // 0\
+$session->counter('counter_1');   // 0
 ```
 
 ## Removing old sessions
@@ -134,5 +130,5 @@ You can use encryption for session data. Use `Ddrv\Slim\Session\Handler\Encrypti
 
 ```php
 /** @var Ddrv\Slim\Session\Handler $handler */
-$session = new Ddrv\Slim\Session\Session(new Ddrv\Slim\Session\Handler\EncryptedHandlerDecorator($handler, 'secret-key'));
+$cryptHandler = new Ddrv\Slim\Session\Handler\EncryptedHandlerDecorator($handler, 'secret-key', 16);
 ``` 

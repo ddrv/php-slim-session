@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Ddrv\Slim\Session\Handler;
 
 use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Session;
 
-class ArrayHandler implements Handler
+final class ArrayHandler implements Handler
 {
     use IdGeneratorTrait;
 
@@ -23,20 +24,21 @@ class ArrayHandler implements Handler
     /**
      * @inheritDoc
      */
-    public function read(string $sessionId): string
+    public function read(string $sessionId): Session
     {
-        if (!array_key_exists($sessionId, $this->storage)) {
-            return '';
+        $serialized = null;
+        if (array_key_exists($sessionId, $this->storage)) {
+            $serialized = $this->storage[$sessionId];
         }
-        return $this->storage[$sessionId];
+        return Session::create($serialized);
     }
 
     /**
      * @inheritDoc
      */
-    public function write(string $sessionId, string $serializedData): void
+    public function write(string $sessionId, Session $session): void
     {
-        $this->storage[$sessionId] = $serializedData;
+        $this->storage[$sessionId] = $session->__toString();
         $this->mtime[$sessionId] = time();
     }
 
@@ -72,7 +74,7 @@ class ArrayHandler implements Handler
     /**
      * @inheritDoc
      */
-    protected function isIdExists(string $sessionId): bool
+    protected function has(string $sessionId): bool
     {
         return array_key_exists($sessionId, $this->storage);
     }
