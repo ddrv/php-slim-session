@@ -22,7 +22,7 @@ trait IdGeneratorTrait
         }
         do {
             $id = substr(str_shuffle($this->symbols), 0, 30);
-        } while ($this->isIdExists($id));
+        } while ($this->has($id));
         return $id;
     }
 
@@ -32,5 +32,5 @@ trait IdGeneratorTrait
      * @param string $sessionId session ID
      * @return bool true if session ID exists in storage
      */
-    abstract protected function isIdExists(string $sessionId): bool;
+    abstract protected function has(string $sessionId): bool;
 }

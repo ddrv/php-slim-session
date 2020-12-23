@@ -12,9 +12,9 @@ interface Handler
      *
      * @param string $sessionId session ID
      *
-     * @return string serialized string of session data
+     * @return Session session object
      */
-    public function read(string $sessionId): string;
+    public function read(string $sessionId): Session;
 
     /**
      * Generate unused session ID.
@@ -28,9 +28,9 @@ interface Handler
      *
      * @param string $sessionId session ID
      *
-     * @param string $serializedData serialized string of session data
+     * @param Session $session session object
      */
-    public function write(string $sessionId, string $serializedData): void;
+    public function write(string $sessionId, Session $session): void;
 
     /**
      * Remove session data from storage and close session.

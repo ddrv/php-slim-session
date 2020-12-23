@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ddrv\Slim\Session\Handler;
 
 use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Session;
 
 class FileHandler implements Handler
 {
@@ -29,30 +30,31 @@ class FileHandler implements Handler
     /**
      * @inheritDoc
      */
-    public function read(string $sessionId): string
+    final public function read(string $sessionId): Session
     {
         $file = $this->getFileName($sessionId);
-        if (!is_readable($file)) {
-            return '';
+        $serialized = null;
+        if (is_readable($file)) {
+            $serialized = file_get_contents($file);
         }
-        return file_get_contents($file);
+        return Session::create($serialized);
     }
 
     /**
      * @inheritDoc
      */
-    public function write(string $sessionId, string $serializedData): void
+    final public function write(string $sessionId, Session $session): void
     {
         if (!is_dir($this->path)) {
             mkdir($this->path, 0755, true);
         }
-        file_put_contents($this->getFileName($sessionId), $serializedData);
+        file_put_contents($this->getFileName($sessionId), $session->__toString());
     }
 
     /**
      * @inheritDoc
      */
-    public function destroy(string $sessionId): void
+    final public function destroy(string $sessionId): void
     {
         unlink($this->getFileName($sessionId));
     }
@@ -60,7 +62,7 @@ class FileHandler implements Handler
     /**
      * @inheritDoc
      */
-    public function garbageCollect(int $maxLifeTime): int
+    final public function garbageCollect(int $maxLifeTime): int
     {
         $result = 0;
         $files = glob($this->path . DIRECTORY_SEPARATOR . $this->name . '_*');
@@ -77,7 +79,7 @@ class FileHandler implements Handler
     /**
      * @inheritDoc
      */
-    protected function isIdExists(string $sessionId): bool
+    final protected function has(string $sessionId): bool
     {
         return file_exists($this->getFileName($sessionId));
     }
