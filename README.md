@@ -11,7 +11,7 @@ PHP Library for work with sessions.
 
 1. Run in console:
     ```text
-    composer require ddrv/slim-session:^1.0
+    composer require ddrv/slim-session:^2.0
     ```
 1. Include autoload file
     ```php
