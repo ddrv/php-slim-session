@@ -1,15 +1,15 @@
 <?php
 
-namespace Ddrv\Slim\Session\Handler;
+namespace Ddrv\Slim\Session\Storage;
 
-use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Storage;
 use Ddrv\Slim\Session\Session;
 
-class EncryptedHandlerDecorator implements Handler
+class EncryptedStorageDecorator implements Storage
 {
 
     /**
-     * @var Handler
+     * @var Storage
      */
     private $handler;
 
@@ -24,11 +24,11 @@ class EncryptedHandlerDecorator implements Handler
     private $saltLen;
 
     /**
-     * @param Handler $handler session handler
+     * @param Storage $handler session handler
      * @param string $secret encryption key string
      * @param int $saltLen
      */
-    public function __construct(Handler $handler, string $secret, int $saltLen = 16)
+    public function __construct(Storage $handler, string $secret, int $saltLen = 16)
     {
         $this->secret = $secret;
         $this->handler = $handler;
@@ -75,9 +75,9 @@ class EncryptedHandlerDecorator implements Handler
     /**
      * @inheritDoc
      */
-    public function destroy(string $sessionId): void
+    public function remove(string $sessionId): void
     {
-        $this->handler->destroy($sessionId);
+        $this->handler->remove($sessionId);
     }
 
     /**

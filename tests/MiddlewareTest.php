@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Ddrv\Tests\Slim\Session;
 
-use Ddrv\Slim\Session\Handler;
-use Ddrv\Slim\Session\Handler\ArrayHandler;
+use Ddrv\Slim\Session\Storage;
+use Ddrv\Slim\Session\Storage\ArrayStorage;
 use Ddrv\Slim\Session\Middleware\SessionMiddleware;
 use Ddrv\Slim\Session\Tool\SessionExtractor;
 use Ddrv\Slim\Session\Tool\SessionRegeneration;
@@ -106,7 +106,7 @@ class MiddlewareTest extends TestCase
     }
 
     private function getMiddleware(
-        Handler $sessionHandler,
+        Storage $sessionHandler,
         SessionExtractor $sessionExtractor,
         ?SessionRegeneration $sessionRegeneration = null
     ): SessionMiddleware {
@@ -114,8 +114,8 @@ class MiddlewareTest extends TestCase
         return new SessionMiddleware($sessionHandler, $cookieOptionsDetector, $sessionExtractor, $sessionRegeneration);
     }
 
-    private function getSessionHandler(): Handler
+    private function getSessionHandler(): Storage
     {
-        return new ArrayHandler();
+        return new ArrayStorage();
     }
 }

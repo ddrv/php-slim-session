@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Ddrv\Slim\Session\Handler;
+namespace Ddrv\Slim\Session\Storage;
 
-use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Storage;
 use Ddrv\Slim\Session\Session;
 
-class FileHandler implements Handler
+class FileStorage implements Storage
 {
-    use IdGeneratorTrait;
+    use IdGenerator;
 
     /**
      * @var string
@@ -54,7 +54,7 @@ class FileHandler implements Handler
     /**
      * @inheritDoc
      */
-    final public function destroy(string $sessionId): void
+    final public function remove(string $sessionId): void
     {
         unlink($this->getFileName($sessionId));
     }

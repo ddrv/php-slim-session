@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Ddrv\Slim\Session\Handler;
+namespace Ddrv\Slim\Session\Storage;
 
-use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Storage;
 use Ddrv\Slim\Session\Session;
 
-final class ArrayHandler implements Handler
+final class ArrayStorage implements Storage
 {
-    use IdGeneratorTrait;
+    use IdGenerator;
 
     /**
      * @var string[]
@@ -45,7 +45,7 @@ final class ArrayHandler implements Handler
     /**
      * @inheritDoc
      */
-    public function destroy(string $sessionId): void
+    public function remove(string $sessionId): void
     {
         if (array_key_exists($sessionId, $this->storage)) {
             unset($this->storage[$sessionId]);
@@ -64,7 +64,7 @@ final class ArrayHandler implements Handler
         foreach (array_keys($this->storage) as $sessionId) {
             $time = array_key_exists($sessionId, $this->mtime) ? $this->mtime[$sessionId] : 0;
             if ($time < $maxLifeTime) {
-                $this->destroy($sessionId);
+                $this->remove($sessionId);
                 $result++;
             }
         }

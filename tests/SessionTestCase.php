@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Ddrv\Tests\Slim\Session;
 
-use Ddrv\Slim\Session\Handler;
+use Ddrv\Slim\Session\Storage;
 use PHPUnit\Framework\TestCase;
 
 abstract class SessionTestCase extends TestCase
@@ -14,9 +14,9 @@ abstract class SessionTestCase extends TestCase
      * @covers \Ddrv\Slim\Session\Session::increment()
      * @covers \Ddrv\Slim\Session\Session::decrement()
      * @covers \Ddrv\Slim\Session\Session::reset()
-     * @covers \Ddrv\Slim\Session\Handler::generateId()
-     * @covers \Ddrv\Slim\Session\Handler::read()
-     * @covers \Ddrv\Slim\Session\Handler::write()
+     * @covers \Ddrv\Slim\Session\Storage::generateId()
+     * @covers \Ddrv\Slim\Session\Storage::read()
+     * @covers \Ddrv\Slim\Session\Storage::write()
      */
     public function testCounter()
     {
@@ -43,9 +43,9 @@ abstract class SessionTestCase extends TestCase
      * @covers \Ddrv\Slim\Session\Session::flash()
      * @covers \Ddrv\Slim\Session\Session::has()
      * @covers \Ddrv\Slim\Session\Session::get()
-     * @covers \Ddrv\Slim\Session\Handler::generateId()
-     * @covers \Ddrv\Slim\Session\Handler::read()
-     * @covers \Ddrv\Slim\Session\Handler::write()
+     * @covers \Ddrv\Slim\Session\Storage::generateId()
+     * @covers \Ddrv\Slim\Session\Storage::read()
+     * @covers \Ddrv\Slim\Session\Storage::write()
      */
     public function testFlash()
     {
@@ -72,9 +72,9 @@ abstract class SessionTestCase extends TestCase
      * @covers \Ddrv\Slim\Session\Session::flash()
      * @covers \Ddrv\Slim\Session\Session::has()
      * @covers \Ddrv\Slim\Session\Session::get()
-     * @covers \Ddrv\Slim\Session\Handler::generateId()
-     * @covers \Ddrv\Slim\Session\Handler::read()
-     * @covers \Ddrv\Slim\Session\Handler::write()
+     * @covers \Ddrv\Slim\Session\Storage::generateId()
+     * @covers \Ddrv\Slim\Session\Storage::read()
+     * @covers \Ddrv\Slim\Session\Storage::write()
      */
     public function testValues()
     {
@@ -109,5 +109,5 @@ abstract class SessionTestCase extends TestCase
         $handler->write($id, $session);
     }
 
-    abstract protected function getSessionHandler(): Handler;
+    abstract protected function getSessionHandler(): Storage;
 }
