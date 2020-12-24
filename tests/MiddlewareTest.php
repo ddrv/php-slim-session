@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Ddrv\Tests\Slim\Session;
 
 use Ddrv\Slim\Session\Handler;
-use Ddrv\Slim\Session\Handler\ArrayHandler;
+use Ddrv\Slim\Session\Storage\ArrayStorage;
 use Ddrv\Slim\Session\Middleware\SessionMiddleware;
 use Ddrv\Slim\Session\Tool\SessionExtractor;
+use Ddrv\Slim\Session\Tool\SessionNVisitRegeneration;
 use Ddrv\Slim\Session\Tool\SessionRegeneration;
 use Ddrv\Slim\Session\Tool\SimpleCookieOptionsDetector;
 use PHPUnit\Framework\TestCase;
@@ -49,16 +50,17 @@ class MiddlewareTest extends TestCase
      */
     public function testSessionRegenerate()
     {
-        $storage = $this->getSessionHandler();
+        $sessionHandler = $this->getSessionHandler();
         $visits = 10;
         $extractor = new SessionExtractor();
-        $mw = $this->getMiddleware($storage, $extractor, new SessionRegeneration(self::VISIT_COUNTER, $visits));
-        $sessionId = $storage->generateId();
-        $handler = $this->getRequestHandler($extractor);
+        $regeneration = new SessionNVisitRegeneration(self::VISIT_COUNTER, $visits);
+        $mw = $this->getMiddleware($sessionHandler, $extractor, $regeneration);
+        $sessionId = $sessionHandler->generateId();
+        $server = $this->getRequestHandler($extractor);
 
         for ($i = 1; $i <= $visits * 3; $i++) {
             $request = $this->getRequest($sessionId);
-            $response = $mw->process($request, $handler);
+            $response = $mw->process($request, $server);
             $visit = (int)$response->getHeaderLine('X-Visit-Number');
             $this->assertSame($i % $visits, $visit);
         }
@@ -116,6 +118,6 @@ class MiddlewareTest extends TestCase
 
     private function getSessionHandler(): Handler
     {
-        return new ArrayHandler();
+        return new Handler(new ArrayStorage());
     }
 }

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Ddrv\Tests\Slim\Session;
 
-use Ddrv\Slim\Session\Handler;
-use Ddrv\Slim\Session\Handler\ArrayHandler;
+use Ddrv\Slim\Session\Storage;
+use Ddrv\Slim\Session\Storage\ArrayStorage;
 
 class ArraySessionTest extends SessionTestCase
 {
 
-    protected function getSessionHandler(): Handler
+    protected function getSessionStorage(): Storage
     {
-        return new ArrayHandler();
+        return new ArrayStorage();
     }
 }

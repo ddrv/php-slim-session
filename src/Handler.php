@@ -4,47 +4,79 @@ declare(strict_types=1);
 
 namespace Ddrv\Slim\Session;
 
-interface Handler
+use DateTime;
+use Ddrv\Slim\Session\IdGenerator\RandomIdGenerator;
+use RuntimeException;
+
+final class Handler
 {
 
     /**
-     * Read session data by session ID.
-     *
-     * @param string $sessionId session ID
-     *
-     * @return Session session object
+     * @var Storage
      */
-    public function read(string $sessionId): Session;
+    private $storage;
 
     /**
-     * Generate unused session ID.
-     *
-     * @return string session ID
+     * @var IdGenerator|null
      */
-    public function generateId(): string;
+    private $idGenerator;
 
-    /**
-     * Write serialized string of session data to storage.
-     *
-     * @param string $sessionId session ID
-     *
-     * @param Session $session session object
-     */
-    public function write(string $sessionId, Session $session): void;
+    public function __construct(Storage $storage, ?IdGenerator $idGenerator = null)
+    {
+        $this->storage = $storage;
+        $this->idGenerator = $idGenerator ?? new RandomIdGenerator();
+    }
 
-    /**
-     * Remove session data from storage and close session.
-     *
-     * @param string $sessionId session ID
-     */
-    public function destroy(string $sessionId): void;
+    public function read(string $sessionId): Session
+    {
+        $serialized = $this->storage->read($sessionId);
+        $session = Session::create($serialized);
+        if ($session->getExpirationTime()->getTimestamp() < time()) {
+            $this->destroy($sessionId);
+            $session = Session::create();
+        }
+        return $session;
+    }
 
-    /**
-     * Remove sessions olden maximal life time.
-     *
-     * @param int $maxLifeTime maximal life time, unix timestamp
-     *
-     * @return int quantity of removed sessions
-     */
-    public function garbageCollect(int $maxLifeTime): int;
+    public function generateId(): string
+    {
+        $attempts = 10;
+        do {
+            $sessionId = $this->idGenerator->generateId();
+            $attempts--;
+            $success = !$this->storage->has($sessionId);
+        } while (!$success && $attempts > 0);
+        if (!$success) {
+            throw new RuntimeException('can not generate unique session id');
+        }
+        $expires = (new DateTime())->modify('+1 day');
+        $this->storage->write($sessionId, '', $expires);
+        return $sessionId;
+    }
+
+    public function write(?string $sessionId, Session $session): string
+    {
+        if (!$sessionId) {
+            $sessionId = $this->generateId();
+        }
+        $expirationTime = $session->getExpirationTime();
+        $serialized = $session->__toString();
+        $this->storage->write($sessionId, $serialized, $expirationTime);
+        if ($session->isNeedRegenerate()) {
+            $regeneratedId = $this->generateId();
+            $this->storage->rename($sessionId, $regeneratedId);
+            $sessionId = $regeneratedId;
+        }
+        return $sessionId;
+    }
+
+    public function destroy(string $sessionId): void
+    {
+        $this->storage->remove($sessionId);
+    }
+
+    public function removeExpiredSessions(): int
+    {
+        return $this->storage->removeExpiredSessions();
+    }
 }

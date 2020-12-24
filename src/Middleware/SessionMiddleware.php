@@ -71,11 +71,6 @@ class SessionMiddleware implements MiddlewareInterface
         $request = $request->withAttribute($this->extractor->getAttributeName(), $session);
         $response = $handler->handle($request);
 
-        if ($session->isNeedRegenerate()) {
-            $this->handler->destroy($sessionId);
-            $sessionId = $this->handler->generateId();
-        }
-
         $cookie = $this->createCookie($options, $sessionId);
         $this->handler->write($sessionId, $session);
         return $response->withAddedHeader('Set-Cookie', $cookie);
@@ -90,7 +85,7 @@ class SessionMiddleware implements MiddlewareInterface
             $cookie .= '; Expires=' . $expires->format(DateTime::RFC7231);
         }
         $cookie .= '; Domain=' . $options->getDomain();
-        $cookie .= '; Path=' . $options->getLifetime();
+        $cookie .= '; Path=' . $options->getPath();
         $cookie .= '; SameSite=' . $options->getSameSite();
         if ($options->isSecure()) {
             $cookie .= '; Secure';

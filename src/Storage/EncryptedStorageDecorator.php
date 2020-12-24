@@ -1,17 +1,17 @@
 <?php
 
-namespace Ddrv\Slim\Session\Handler;
+namespace Ddrv\Slim\Session\Storage;
 
-use Ddrv\Slim\Session\Handler;
-use Ddrv\Slim\Session\Session;
+use DateTimeInterface;
+use Ddrv\Slim\Session\Storage;
 
-class EncryptedHandlerDecorator implements Handler
+final class EncryptedStorageDecorator implements Storage
 {
 
     /**
-     * @var Handler
+     * @var Storage
      */
-    private $handler;
+    private $storage;
 
     /**
      * @var string
@@ -24,68 +24,62 @@ class EncryptedHandlerDecorator implements Handler
     private $saltLen;
 
     /**
-     * @param Handler $handler session handler
+     * @param Storage $storage session storage
      * @param string $secret encryption key string
      * @param int $saltLen
      */
-    public function __construct(Handler $handler, string $secret, int $saltLen = 16)
+    public function __construct(Storage $storage, string $secret, int $saltLen = 16)
     {
+        $this->storage = $storage;
         $this->secret = $secret;
-        $this->handler = $handler;
         $this->saltLen = $saltLen;
     }
 
     /**
      * @inheritDoc
      */
-    public function generateId(): string
+    public function read(string $sessionId): ?string
     {
-        return $this->handler->generateId();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function read(string $sessionId): Session
-    {
-        $wrapper = $this->handler->read($sessionId);
-        if (!$wrapper) {
-            return Session::create();
+        $encrypted = $this->storage->read($sessionId);
+        if (!$encrypted) {
+            return null;
         }
-        /** @var string $encrypted */
-        $encrypted = $wrapper->get('encrypted', '');
-        $session = Session::create($this->decrypt($encrypted, $this->secret, $this->saltLen));
-        if ($session instanceof Session) {
-            return $session;
-        }
-        return Session::create();
+        return $this->decrypt($encrypted, $this->secret, $this->saltLen);
     }
 
     /**
      * @inheritDoc
      */
-    public function write(string $sessionId, Session $session): void
+    public function write(string $sessionId, string $serialized, DateTimeInterface $expirationTime): void
     {
-        $encrypted = $this->encrypt($session->__toString(), $this->secret, $this->saltLen);
-        $wrapper = Session::create();
-        $wrapper->set('encrypted', $encrypted);
-        $this->handler->write($sessionId, $wrapper);
+        $encrypted = $this->encrypt($serialized, $this->secret, $this->saltLen);
+        $this->storage->write($sessionId, $encrypted, $expirationTime);
+    }
+
+    public function rename(string $oldSessionId, string $newSessionId): void
+    {
+        $this->storage->rename($oldSessionId, $newSessionId);
+    }
+
+    public function has(string $sessionId): bool
+    {
+        return $this->storage->has($sessionId);
     }
 
     /**
      * @inheritDoc
      */
-    public function destroy(string $sessionId): void
+    public function remove(string $sessionId): void
     {
-        $this->handler->destroy($sessionId);
+        $this->storage->remove($sessionId);
     }
 
     /**
      * @inheritDoc
      */
-    public function garbageCollect(int $maxLifeTime): int
+    public function removeExpiredSessions(): int
     {
-        return $this->handler->garbageCollect($maxLifeTime);
+        return $this->storage->removeExpiredSessions();
     }
 
     private function decrypt(string $encrypted, string $secret, int $saltLen): string
