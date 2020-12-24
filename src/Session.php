@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Ddrv\Slim\Session;
 
+use DateTime;
+use DateTimeInterface;
+use Throwable;
+
 final class Session
 {
 
@@ -17,7 +21,12 @@ final class Session
      */
     private $isNeedRegenerate = false;
 
-    private function __construct()
+    /**
+     * @var DateTimeInterface
+     */
+    private $expirationTime;
+
+    private function __construct(DateTimeInterface $expirationTime)
     {
         $this->data = [
             'data' => [],
@@ -25,6 +34,7 @@ final class Session
             'flash' => [],
             'counter' => [],
         ];
+        $this->expirationTime = $expirationTime;
     }
 
     /**
@@ -158,15 +168,33 @@ final class Session
         return $this->isNeedRegenerate;
     }
 
+    public function getExpirationTime(): DateTimeInterface
+    {
+        return $this->expirationTime;
+    }
+
+    public function setExpirationTime(DateTimeInterface $time)
+    {
+        $this->expirationTime = $time;
+    }
+
     public function __toString(): string
     {
-        return serialize($this->data);
+        $data = $this->data;
+        $data['expires'] = $this->expirationTime->getTimestamp();
+        return serialize($data);
     }
 
     public static function create(?string $serialized = null): self
     {
-        $session = new self();
-        $data = $serialized ? unserialize($serialized) : [];
+        $data = $serialized ? (array)unserialize($serialized) : [];
+        $time = array_key_exists('expires', $data) ? $data['expires'] : time() + 86400;
+        try {
+            $expired = DateTime::createFromFormat('U', $time);
+        } catch (Throwable $exception) {
+            $expired = (new DateTime())->modify('+1 day');
+        }
+        $session = new self($expired);
         $session->data['data'] = array_key_exists('data', $data) ? (array)$data['data'] : [];
         $session->data['counter'] = array_key_exists('counter', $data) ? (array)$data['counter'] : [];
         $session->data['prev'] = array_key_exists('flash', $data) ? (array)$data['flash'] : [];
