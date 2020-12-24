@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Ddrv\Slim\Session\Storage;
 
+use DateTimeInterface;
 use Ddrv\Slim\Session\Storage;
-use Ddrv\Slim\Session\Session;
 
-class FileStorage implements Storage
+final class FileStorage implements Storage
 {
-    use IdGenerator;
 
     /**
      * @var string
@@ -30,58 +29,82 @@ class FileStorage implements Storage
     /**
      * @inheritDoc
      */
-    final public function read(string $sessionId): Session
+    public function read(string $sessionId): ?string
     {
-        $file = $this->getFileName($sessionId);
+        $file = $this->getSessionFileName($sessionId);
         $serialized = null;
         if (is_readable($file)) {
             $serialized = file_get_contents($file);
         }
-        return Session::create($serialized);
+        return $serialized;
     }
 
     /**
      * @inheritDoc
      */
-    final public function write(string $sessionId, Session $session): void
+    public function write(string $sessionId, string $serialized, DateTimeInterface $expirationTime): void
     {
         if (!is_dir($this->path)) {
             mkdir($this->path, 0755, true);
         }
-        file_put_contents($this->getFileName($sessionId), $session->__toString());
+        file_put_contents($this->getSessionFileName($sessionId), $serialized);
+        file_put_contents($this->getEtimeFileName($sessionId), $expirationTime->getTimestamp());
     }
 
     /**
      * @inheritDoc
      */
-    final public function remove(string $sessionId): void
+    public function remove(string $sessionId): void
     {
-        unlink($this->getFileName($sessionId));
+        $session = $this->getSessionFileName($sessionId);
+        $etime = $this->getEtimeFileName($sessionId);
+        if (file_exists($session)) {
+            unlink($session);
+        }
+        if (file_exists($etime)) {
+            unlink($etime);
+        }
     }
 
     /**
      * @inheritDoc
      */
-    final public function garbageCollect(int $maxLifeTime): int
+    public function has(string $sessionId): bool
     {
+        return file_exists($this->getSessionFileName($sessionId));
+    }
+
+    public function rename(string $oldSessionId, string $newSessionId): void
+    {
+        $old1 = $this->getSessionFileName($oldSessionId);
+        $old2 = $this->getEtimeFileName($oldSessionId);
+        $new1 = $this->getSessionFileName($newSessionId);
+        $new2 = $this->getSessionFileName($newSessionId);
+        if (file_exists($old1)) {
+            rename($old1, $new1);
+        }
+        if (file_exists($old2)) {
+            rename($old2, $new2);
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function removeExpiredSessions(): int
+    {
+        $now = time();
         $result = 0;
-        $files = glob($this->path . DIRECTORY_SEPARATOR . $this->name . '_*');
+        $files = glob($this->path . DIRECTORY_SEPARATOR . $this->name . '_*.etime');
         foreach ($files as $file) {
-            $time = filemtime($file);
-            if ($time < $maxLifeTime) {
-                unlink($file);
+            $time = (int)file_get_contents($file);
+            if ($time < $now) {
+                $sessionId = mb_substr(pathinfo($file, PATHINFO_BASENAME), 0, -6);
+                $this->remove($sessionId);
                 $result++;
             }
         }
         return $result;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    final protected function has(string $sessionId): bool
-    {
-        return file_exists($this->getFileName($sessionId));
     }
 
     /**
@@ -90,8 +113,19 @@ class FileStorage implements Storage
      * @param string $sessionId session ID
      * @return string name of session file
      */
-    private function getFileName(string $sessionId): string
+    private function getSessionFileName(string $sessionId): string
     {
         return $this->path . DIRECTORY_SEPARATOR . $this->name . '_' . $sessionId;
+    }
+
+    /**
+     * Return name of session file.
+     *
+     * @param string $sessionId session ID
+     * @return string name of session file
+     */
+    private function getEtimeFileName(string $sessionId): string
+    {
+        return $this->path . DIRECTORY_SEPARATOR . $this->name . '_' . $sessionId . '.etime';
     }
 }

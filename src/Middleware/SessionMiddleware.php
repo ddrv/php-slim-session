@@ -4,7 +4,7 @@ namespace Ddrv\Slim\Session\Middleware;
 
 use DateTime;
 use DateTimeZone;
-use Ddrv\Slim\Session\Storage;
+use Ddrv\Slim\Session\Handler;
 use Ddrv\Slim\Session\Tool\CookieOptions;
 use Ddrv\Slim\Session\Tool\CookieOptionsDetector;
 use Ddrv\Slim\Session\Tool\SessionExtractor;
@@ -19,7 +19,7 @@ class SessionMiddleware implements MiddlewareInterface
 {
 
     /**
-     * @var Storage
+     * @var Handler
      */
     private $handler;
 
@@ -44,7 +44,7 @@ class SessionMiddleware implements MiddlewareInterface
     private $gmt;
 
     public function __construct(
-        Storage $handler,
+        Handler $handler,
         ?CookieOptionsDetector $cookieOptionsDetector = null,
         ?SessionExtractor $sessionExtractor = null,
         ?SessionRegeneration $sessionRegeneration = null
@@ -71,11 +71,6 @@ class SessionMiddleware implements MiddlewareInterface
         $request = $request->withAttribute($this->extractor->getAttributeName(), $session);
         $response = $handler->handle($request);
 
-        if ($session->isNeedRegenerate()) {
-            $this->handler->remove($sessionId);
-            $sessionId = $this->handler->generateId();
-        }
-
         $cookie = $this->createCookie($options, $sessionId);
         $this->handler->write($sessionId, $session);
         return $response->withAddedHeader('Set-Cookie', $cookie);
@@ -90,7 +85,7 @@ class SessionMiddleware implements MiddlewareInterface
             $cookie .= '; Expires=' . $expires->format(DateTime::RFC7231);
         }
         $cookie .= '; Domain=' . $options->getDomain();
-        $cookie .= '; Path=' . $options->getLifetime();
+        $cookie .= '; Path=' . $options->getPath();
         $cookie .= '; SameSite=' . $options->getSameSite();
         if ($options->isSecure()) {
             $cookie .= '; Secure';

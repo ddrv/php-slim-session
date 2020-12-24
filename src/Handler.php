@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Ddrv\Slim\Session;
 
-use DateTimeInterface;
+use DateTime;
 use Ddrv\Slim\Session\IdGenerator\RandomIdGenerator;
 use RuntimeException;
 
@@ -49,17 +49,19 @@ final class Handler
         if (!$success) {
             throw new RuntimeException('can not generate unique session id');
         }
+        $expires = (new DateTime())->modify('+1 day');
+        $this->storage->write($sessionId, '', $expires);
         return $sessionId;
     }
 
-    public function write(?string $sessionId, Session $session, DateTimeInterface $expirationTime): string
+    public function write(?string $sessionId, Session $session): string
     {
         if (!$sessionId) {
             $sessionId = $this->generateId();
         }
-        $session->setExpirationTime($expirationTime);
+        $expirationTime = $session->getExpirationTime();
         $serialized = $session->__toString();
-        $this->storage->write($sessionId, $serialized);
+        $this->storage->write($sessionId, $serialized, $expirationTime);
         if ($session->isNeedRegenerate()) {
             $regeneratedId = $this->generateId();
             $this->storage->rename($sessionId, $regeneratedId);

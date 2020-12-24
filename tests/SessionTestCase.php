@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ddrv\Tests\Slim\Session;
 
+use Ddrv\Slim\Session\Handler;
 use Ddrv\Slim\Session\Storage;
 use PHPUnit\Framework\TestCase;
 
@@ -109,5 +110,10 @@ abstract class SessionTestCase extends TestCase
         $handler->write($id, $session);
     }
 
-    abstract protected function getSessionHandler(): Storage;
+    final protected function getSessionHandler(): Handler
+    {
+        return new Handler($this->getSessionStorage());
+    }
+
+    abstract protected function getSessionStorage(): Storage;
 }

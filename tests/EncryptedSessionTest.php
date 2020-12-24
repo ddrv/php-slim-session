@@ -11,7 +11,7 @@ use Ddrv\Slim\Session\Storage\EncryptedStorageDecorator;
 class EncryptedSessionTest extends SessionTestCase
 {
 
-    protected function getSessionHandler(): Storage
+    protected function getSessionStorage(): Storage
     {
         return new EncryptedStorageDecorator(new ArrayStorage(), 'secret', 3);
     }

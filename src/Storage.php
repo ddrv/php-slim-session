@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ddrv\Slim\Session;
 
+use DateTimeInterface;
+
 interface Storage
 {
 
@@ -11,19 +13,18 @@ interface Storage
      * Read session data by session ID.
      *
      * @param string $sessionId session ID
-     *
-     * @return Session session serialized string
+     * @return string|null session serialized string
      */
-    public function read(string $sessionId): string;
+    public function read(string $sessionId): ?string;
 
     /**
      * Write serialized string of session data to storage.
      *
      * @param string $sessionId session ID
-     *
      * @param string $serialized session serialized data
+     * @param DateTimeInterface $expirationTime
      */
-    public function write(string $sessionId, string $serialized): void;
+    public function write(string $sessionId, string $serialized, DateTimeInterface $expirationTime): void;
 
 
     /**
@@ -37,10 +38,10 @@ interface Storage
     /**
      * Check for exists Session ID.
      *
-     * @param string $sessionName
+     * @param string $sessionId
      * @return bool
      */
-    public function has(string $sessionName): bool;
+    public function has(string $sessionId): bool;
 
     /**
      * Remove session data from storage.

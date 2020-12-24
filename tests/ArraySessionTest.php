@@ -10,7 +10,7 @@ use Ddrv\Slim\Session\Storage\ArrayStorage;
 class ArraySessionTest extends SessionTestCase
 {
 
-    protected function getSessionHandler(): Storage
+    protected function getSessionStorage(): Storage
     {
         return new ArrayStorage();
     }

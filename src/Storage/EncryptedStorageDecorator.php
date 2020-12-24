@@ -2,16 +2,16 @@
 
 namespace Ddrv\Slim\Session\Storage;
 
+use DateTimeInterface;
 use Ddrv\Slim\Session\Storage;
-use Ddrv\Slim\Session\Session;
 
-class EncryptedStorageDecorator implements Storage
+final class EncryptedStorageDecorator implements Storage
 {
 
     /**
      * @var Storage
      */
-    private $handler;
+    private $storage;
 
     /**
      * @var string
@@ -24,52 +24,46 @@ class EncryptedStorageDecorator implements Storage
     private $saltLen;
 
     /**
-     * @param Storage $handler session handler
+     * @param Storage $storage session storage
      * @param string $secret encryption key string
      * @param int $saltLen
      */
-    public function __construct(Storage $handler, string $secret, int $saltLen = 16)
+    public function __construct(Storage $storage, string $secret, int $saltLen = 16)
     {
+        $this->storage = $storage;
         $this->secret = $secret;
-        $this->handler = $handler;
         $this->saltLen = $saltLen;
     }
 
     /**
      * @inheritDoc
      */
-    public function generateId(): string
+    public function read(string $sessionId): ?string
     {
-        return $this->handler->generateId();
+        $encrypted = $this->storage->read($sessionId);
+        if (!$encrypted) {
+            return null;
+        }
+        return $this->decrypt($encrypted, $this->secret, $this->saltLen);
     }
 
     /**
      * @inheritDoc
      */
-    public function read(string $sessionId): Session
+    public function write(string $sessionId, string $serialized, DateTimeInterface $expirationTime): void
     {
-        $wrapper = $this->handler->read($sessionId);
-        if (!$wrapper) {
-            return Session::create();
-        }
-        /** @var string $encrypted */
-        $encrypted = $wrapper->get('encrypted', '');
-        $session = Session::create($this->decrypt($encrypted, $this->secret, $this->saltLen));
-        if ($session instanceof Session) {
-            return $session;
-        }
-        return Session::create();
+        $encrypted = $this->encrypt($serialized, $this->secret, $this->saltLen);
+        $this->storage->write($sessionId, $encrypted, $expirationTime);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function write(string $sessionId, Session $session): void
+    public function rename(string $oldSessionId, string $newSessionId): void
     {
-        $encrypted = $this->encrypt($session->__toString(), $this->secret, $this->saltLen);
-        $wrapper = Session::create();
-        $wrapper->set('encrypted', $encrypted);
-        $this->handler->write($sessionId, $wrapper);
+        $this->storage->rename($oldSessionId, $newSessionId);
+    }
+
+    public function has(string $sessionId): bool
+    {
+        return $this->storage->has($sessionId);
     }
 
     /**
@@ -77,15 +71,15 @@ class EncryptedStorageDecorator implements Storage
      */
     public function remove(string $sessionId): void
     {
-        $this->handler->remove($sessionId);
+        $this->storage->remove($sessionId);
     }
 
     /**
      * @inheritDoc
      */
-    public function garbageCollect(int $maxLifeTime): int
+    public function removeExpiredSessions(): int
     {
-        return $this->handler->garbageCollect($maxLifeTime);
+        return $this->storage->removeExpiredSessions();
     }
 
     private function decrypt(string $encrypted, string $secret, int $saltLen): string
