@@ -22,15 +22,16 @@ PHP Library for work with sessions.
 
 > For example, session cookie name used as `sess_id`.
 
-1. Init handler (for example, `\Ddrv\Slim\Session\Handler\FileHandler`, but it may be any implementation of `\Ddrv\Slim\Session\Handler` interface).
+1. Init storage and handler (for example, `\Ddrv\Slim\Session\Storage\FileHandler`, but it may be any implementation of `\Ddrv\Slim\Session\Storage` interface).
     ```php
-    $handler = new Ddrv\Slim\Session\Handler\FileStorage('/path/to/sessions', 'sess_id');
+    $storage = new Ddrv\Slim\Session\Storage\FileStorage('/path/to/sessions', 'sess_id');
+    $handler = new Ddrv\Slim\Session\Handler($storage);
     ```
 
 1. Define session ID and start the session
 
     ```php
-    /** @var Ddrv\Slim\Session\Storage $handler */
+    /** @var Ddrv\Slim\Session\Handler $handler */
     $sessionId = array_key_exists('sess_id', $_COOKIE) ? $_COOKIE['sess_id'] : $handler->generateId(); 
     $session = $handler->read($sessionId);
 
@@ -55,7 +56,7 @@ PHP Library for work with sessions.
 
     ```php
     /** @var string $sessionId */
-    /** @var Ddrv\Slim\Session\Storage $handler */
+    /** @var Ddrv\Slim\Session\Handler $handler */
     $handler->destroy($sessionId);
     setcookie('sess_id', "", time() + 86400, '/', '.example.com', false, true);
     ```
@@ -120,8 +121,8 @@ $session->counter('counter_1');   // 0
 Remove old sessions from storage from time to time.
 
 ```php
-/** @var Ddrv\Slim\Session\Storage $handler */
-$handler->garbageCollect(time() - 86400); // Delete sessions not used during the day  
+/** @var Ddrv\Slim\Session\Handler $handler */
+$handler->removeExpiredSessions(); // Delete sessions not used during the day  
 ```
 
 ## Encryption
