@@ -70,9 +70,9 @@ class SessionMiddleware implements MiddlewareInterface
         }
         $request = $request->withAttribute($this->extractor->getAttributeName(), $session);
         $response = $handler->handle($request);
+        $sessionId = $this->handler->write($sessionId, $session);
 
         $cookie = $this->createCookie($options, $sessionId);
-        $this->handler->write($sessionId, $session);
         return $response->withAddedHeader('Set-Cookie', $cookie);
     }
 

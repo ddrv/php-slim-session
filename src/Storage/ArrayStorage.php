@@ -42,20 +42,6 @@ final class ArrayStorage implements Storage
     }
 
     /**
-     * @inheritdoc
-     */
-    public function rename(string $oldSessionId, string $newSessionId): void
-    {
-        if (array_key_exists($oldSessionId, $this->storage)) {
-            $this->storage[$newSessionId] = $this->storage[$oldSessionId];
-        }
-        if (array_key_exists($oldSessionId, $this->etime)) {
-            $this->etime[$newSessionId] = $this->etime[$oldSessionId];
-        }
-        $this->remove($oldSessionId);
-    }
-
-    /**
      * @inheritDoc
      */
     public function has(string $sessionId): bool

@@ -61,12 +61,11 @@ final class Handler
         }
         $expirationTime = $session->getExpirationTime();
         $serialized = $session->__toString();
-        $this->storage->write($sessionId, $serialized, $expirationTime);
         if ($session->isNeedRegenerate()) {
-            $regeneratedId = $this->generateId();
-            $this->storage->rename($sessionId, $regeneratedId);
-            $sessionId = $regeneratedId;
+            $this->storage->remove($sessionId);
+            $sessionId = $this->generateId();
         }
+        $this->storage->write($sessionId, $serialized, $expirationTime);
         return $sessionId;
     }
 
