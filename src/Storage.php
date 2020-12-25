@@ -26,15 +26,6 @@ interface Storage
      */
     public function write(string $sessionId, string $serialized, DateTimeInterface $expirationTime): void;
 
-
-    /**
-     * Change session ID.
-     *
-     * @param string $oldSessionId old session ID
-     * @param string $newSessionId new session ID
-     */
-    public function rename(string $oldSessionId, string $newSessionId): void;
-
     /**
      * Check for exists Session ID.
      *

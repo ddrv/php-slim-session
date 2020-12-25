@@ -34,7 +34,7 @@ class MiddlewareTest extends TestCase
         $extractor = new SessionExtractor();
         $mw = $this->getMiddleware($this->getSessionHandler(), $extractor);
         $request = $this->getRequest();
-        $handler = $this->getRequestHandler($extractor);
+        $handler = $this->getRequestHandler();
         $response = $mw->process($request, $handler);
         $sessionCookie = $response->getHeaderLine('Set-Cookie');
         $keyValue = self::COOKIE_NAME . '=';
@@ -51,18 +51,26 @@ class MiddlewareTest extends TestCase
     public function testSessionRegenerate()
     {
         $sessionHandler = $this->getSessionHandler();
-        $visits = 10;
+        $visits = 5;
         $extractor = new SessionExtractor();
         $regeneration = new SessionNVisitRegeneration(self::VISIT_COUNTER, $visits);
         $mw = $this->getMiddleware($sessionHandler, $extractor, $regeneration);
         $sessionId = $sessionHandler->generateId();
-        $server = $this->getRequestHandler($extractor);
+        $server = $this->getRequestHandler();
 
         for ($i = 1; $i <= $visits * 3; $i++) {
             $request = $this->getRequest($sessionId);
             $response = $mw->process($request, $server);
-            $visit = (int)$response->getHeaderLine('X-Visit-Number');
-            $this->assertSame($i % $visits, $visit);
+            $cookie = $response->getHeaderLine('Set-Cookie');
+            $expected = trim(explode(';', $cookie)[0]);
+            $actual = self::COOKIE_NAME . '=' . $sessionId;
+            if ($i % $visits === 0) {
+                $this->assertNotSame($expected, $actual);
+                $sessionId = explode('=', $expected . '=')[1];
+            } else {
+                $this->assertSame($expected, $actual);
+                $this->assertTrue(strpos($cookie, $actual) === 0);
+            }
         }
     }
 
@@ -76,33 +84,13 @@ class MiddlewareTest extends TestCase
         return $request;
     }
 
-    private function getRequestHandler(SessionExtractor $sessionExtractor): RequestHandlerInterface
+    private function getRequestHandler(): RequestHandlerInterface
     {
-        return new class ($sessionExtractor, self::VISIT_COUNTER) implements RequestHandlerInterface {
-
-            /**
-             * @var SessionExtractor
-             */
-            private $sessionExtractor;
-
-            /**
-             * @var string
-             */
-            private $counter;
-
-            public function __construct(SessionExtractor $sessionExtractor, string $counter)
-            {
-                $this->sessionExtractor = $sessionExtractor;
-                $this->counter = $counter;
-            }
+        return new class () implements RequestHandlerInterface {
 
             public function handle(ServerRequestInterface $request): ResponseInterface
             {
-                $session = $this->sessionExtractor->getSession($request);
-                return (new ResponseFactory())
-                    ->createResponse(200, 'OK')
-                    ->withHeader('X-Visit-Number', $session->counter($this->counter))
-                ;
+                return (new ResponseFactory())->createResponse(200, 'OK');
             }
         };
     }

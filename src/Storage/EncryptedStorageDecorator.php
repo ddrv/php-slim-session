@@ -56,11 +56,6 @@ final class EncryptedStorageDecorator implements Storage
         $this->storage->write($sessionId, $encrypted, $expirationTime);
     }
 
-    public function rename(string $oldSessionId, string $newSessionId): void
-    {
-        $this->storage->rename($oldSessionId, $newSessionId);
-    }
-
     public function has(string $sessionId): bool
     {
         return $this->storage->has($sessionId);

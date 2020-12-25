@@ -74,20 +74,6 @@ final class FileStorage implements Storage
         return file_exists($this->getSessionFileName($sessionId));
     }
 
-    public function rename(string $oldSessionId, string $newSessionId): void
-    {
-        $old1 = $this->getSessionFileName($oldSessionId);
-        $old2 = $this->getEtimeFileName($oldSessionId);
-        $new1 = $this->getSessionFileName($newSessionId);
-        $new2 = $this->getSessionFileName($newSessionId);
-        if (file_exists($old1)) {
-            rename($old1, $new1);
-        }
-        if (file_exists($old2)) {
-            rename($old2, $new2);
-        }
-    }
-
     /**
      * @inheritDoc
      */
